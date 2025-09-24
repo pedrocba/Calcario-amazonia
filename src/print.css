@@ -1,0 +1,214 @@
+/* Estilos para Impressão - SaleReceipt */
+
+@media print {
+  /* Reset de margens e padding para impressão */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    font-size: 12px;
+    line-height: 1.4;
+    color: #000;
+    background: white;
+  }
+
+  /* Área imprimível */
+  .printable-area {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 20px;
+    background: white;
+    color: black;
+  }
+
+  /* Evitar quebras de página desnecessárias */
+  .printable-area h1,
+  .printable-area h2,
+  .printable-area h3 {
+    page-break-after: avoid;
+  }
+
+  .printable-area table {
+    page-break-inside: avoid;
+  }
+
+  /* Cabeçalhos */
+  .printable-area h1 {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 20px;
+    color: #000;
+  }
+
+  .printable-area h2 {
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: #000;
+    border-bottom: 2px solid #333;
+    padding-bottom: 5px;
+  }
+
+  /* Tabelas */
+  .printable-area table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+  }
+
+  .printable-area th,
+  .printable-area td {
+    border: 1px solid #333;
+    padding: 8px;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .printable-area th {
+    background-color: #f5f5f5 !important;
+    font-weight: bold;
+    text-align: center;
+  }
+
+  .printable-area tbody tr:nth-child(even) {
+    background-color: #f9f9f9 !important;
+  }
+
+  /* Formatação de moeda */
+  .printable-area .currency {
+    text-align: right;
+  }
+
+  /* Quebras de página */
+  .page-break {
+    page-break-before: always;
+  }
+
+  /* Ocultar elementos não necessários na impressão */
+  .no-print {
+    display: none !important;
+  }
+
+  /* Botões e elementos interativos */
+  button,
+  .btn,
+  .button {
+    display: none !important;
+  }
+
+  /* Links */
+  a {
+    color: #000 !important;
+    text-decoration: none !important;
+  }
+
+  /* Grid e Flexbox para impressão */
+  .printable-area .grid {
+    display: table;
+    width: 100%;
+  }
+
+  .printable-area .grid > div {
+    display: table-cell;
+    vertical-align: top;
+  }
+
+  .printable-area .flex {
+    display: table;
+    width: 100%;
+  }
+
+  .printable-area .flex > div {
+    display: table-cell;
+    vertical-align: top;
+  }
+
+  /* Espaçamento para impressão */
+  .printable-area .mb-8 {
+    margin-bottom: 20px;
+  }
+
+  .printable-area .mb-4 {
+    margin-bottom: 10px;
+  }
+
+  .printable-area .mt-12 {
+    margin-top: 30px;
+  }
+
+  /* Assinaturas */
+  .printable-area .signature-line {
+    border-top: 1px solid #333;
+    margin-top: 40px;
+    padding-top: 10px;
+  }
+
+  /* Data de impressão */
+  .printable-area .print-date {
+    font-size: 10px;
+    color: #666;
+    text-align: center;
+    margin-top: 20px;
+  }
+
+  /* Observações */
+  .printable-area .observations {
+    background-color: #f9f9f9 !important;
+    border: 1px solid #ddd;
+    padding: 10px;
+    margin: 10px 0;
+  }
+
+  /* Totais destacados */
+  .printable-area .total-row {
+    font-weight: bold;
+    background-color: #e9e9e9 !important;
+  }
+
+  /* Valores negativos (descontos) */
+  .printable-area .negative-value {
+    color: #d32f2f;
+  }
+
+  /* Responsividade para impressão */
+  @page {
+    margin: 1cm;
+    size: A4;
+  }
+
+  /* Evitar quebras de página em elementos importantes */
+  .printable-area .header-section,
+  .printable-area .address-section,
+  .printable-area .items-section,
+  .printable-area .totals-section,
+  .printable-area .payment-section {
+    page-break-inside: avoid;
+  }
+
+  /* Garantir que o texto seja legível */
+  .printable-area {
+    font-size: 11px;
+    line-height: 1.3;
+  }
+
+  .printable-area th {
+    font-size: 10px;
+  }
+
+  .printable-area td {
+    font-size: 10px;
+  }
+}
+
+
+
+
+
+
+

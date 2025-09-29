@@ -52,3 +52,10 @@ SELECT 'Tabelas básicas criadas com sucesso!' as status;
 
 
 
+
+
+
+
+
+
+

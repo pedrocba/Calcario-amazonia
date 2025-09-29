@@ -16,7 +16,22 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Verificar se há uma sessão ativa
+    // Verificar se há um usuário mock no localStorage primeiro
+    const mockUser = localStorage.getItem('mockUser')
+    if (mockUser) {
+      try {
+        const user = JSON.parse(mockUser)
+        console.log('Usuário mock encontrado:', user)
+        setUser(user)
+        setLoading(false)
+        return
+      } catch (error) {
+        console.error('Erro ao parsear usuário mock:', error)
+        localStorage.removeItem('mockUser')
+      }
+    }
+
+    // Verificar se há uma sessão ativa do Supabase
     const getSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession()
@@ -56,6 +71,41 @@ export const AuthProvider = ({ children }) => {
       setLoading(true)
       console.log('Tentando fazer login com:', email)
       
+      // Verificação para usuário admin (mock)
+      if (email === 'admin' && password === 'admin') {
+        console.log('Login admin mock bem-sucedido!')
+        const mockUser = {
+          id: 'admin-id',
+          email: 'admin@calcarioamazonia.com',
+          user_metadata: { 
+            full_name: 'Administrador',
+            role: 'admin'
+          }
+        }
+        setUser(mockUser)
+        localStorage.setItem('mockUser', JSON.stringify(mockUser))
+        setLoading(false)
+        return { success: true, data: { user: mockUser } }
+      }
+      
+      // Verificação para super admin (mock)
+      if (email === 'superadmin@calcarioamazonia.com' && password === 'admin123') {
+        console.log('Login super admin mock bem-sucedido!')
+        const mockUser = {
+          id: 'super-admin-id',
+          email: 'superadmin@calcarioamazonia.com',
+          user_metadata: { 
+            full_name: 'Super Admin',
+            role: 'super_admin'
+          }
+        }
+        setUser(mockUser)
+        localStorage.setItem('mockUser', JSON.stringify(mockUser))
+        setLoading(false)
+        return { success: true, data: { user: mockUser } }
+      }
+      
+      // Login real com Supabase para outros usuários
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -67,6 +117,13 @@ export const AuthProvider = ({ children }) => {
       }
 
       console.log('Login bem-sucedido:', data.user?.id)
+      
+      // Aguardar o setUser ser processado
+      setUser(data.user)
+      
+      // Aguardar um pouco para garantir que o estado foi atualizado
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
       return { success: true, data }
     } catch (error) {
       console.error('Erro no login:', error)
@@ -79,6 +136,18 @@ export const AuthProvider = ({ children }) => {
   const signOut = async () => {
     try {
       setLoading(true)
+      
+      // Se for usuário mock, apenas limpar localStorage
+      const mockUser = localStorage.getItem('mockUser')
+      if (mockUser) {
+        localStorage.removeItem('mockUser')
+        setUser(null)
+        localStorage.removeItem('selectedCompany')
+        setLoading(false)
+        return
+      }
+      
+      // Logout do Supabase para usuários reais
       const { error } = await supabase.auth.signOut()
       if (error) {
         throw error

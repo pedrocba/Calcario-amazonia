@@ -1,4 +1,4 @@
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/contexts/SimpleAuthContext'
 
 /**
  * Hook para gerenciar permissões baseadas em roles
@@ -32,27 +32,27 @@ export const usePermissions = () => {
 
     const permissions = {
       // Permissões de administração
-      'manage_users': ['admin'],
-      'manage_companies': ['admin'],
-      'manage_system_settings': ['admin'],
-      'view_admin_panel': ['admin'],
+      'manage_users': ['super_admin', 'admin'],
+      'manage_companies': ['super_admin', 'admin'],
+      'manage_system_settings': ['super_admin', 'admin'],
+      'view_admin_panel': ['super_admin', 'admin'],
       
       // Permissões de gestão
-      'manage_vehicles': ['admin', 'gerente_patio'],
-      'manage_finance': ['admin', 'gerente_patio'],
-      'view_reports': ['admin', 'gerente_patio'],
-      'manage_requisitions': ['admin', 'gerente_patio', 'almoxarife'],
+      'manage_vehicles': ['super_admin', 'admin', 'gerente_patio'],
+      'manage_finance': ['super_admin', 'admin', 'gerente_patio'],
+      'view_reports': ['super_admin', 'admin', 'gerente_patio'],
+      'manage_requisitions': ['super_admin', 'admin', 'gerente_patio', 'almoxarife'],
       
       // Permissões de almoxarifado
-      'manage_products': ['admin', 'almoxarife'],
-      'manage_inventory': ['admin', 'almoxarife'],
-      'manage_transfers': ['admin', 'almoxarife'],
-      'manage_warehouse': ['admin', 'almoxarife'],
+      'manage_products': ['super_admin', 'admin', 'almoxarife'],
+      'manage_inventory': ['super_admin', 'admin', 'almoxarife'],
+      'manage_transfers': ['super_admin', 'admin', 'almoxarife'],
+      'manage_warehouse': ['super_admin', 'admin', 'almoxarife'],
       
       // Permissões básicas
-      'view_dashboard': ['admin', 'gerente_patio', 'almoxarife', 'usuario_padrao'],
-      'use_weighing': ['admin', 'gerente_patio', 'almoxarife', 'usuario_padrao'],
-      'view_own_data': ['admin', 'gerente_patio', 'almoxarife', 'usuario_padrao']
+      'view_dashboard': ['super_admin', 'admin', 'gerente_patio', 'almoxarife', 'usuario_padrao'],
+      'use_weighing': ['super_admin', 'admin', 'gerente_patio', 'almoxarife', 'usuario_padrao'],
+      'view_own_data': ['super_admin', 'admin', 'gerente_patio', 'almoxarife', 'usuario_padrao']
     }
 
     const allowedRoles = permissions[permission] || []

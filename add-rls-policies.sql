@@ -30,3 +30,10 @@ SELECT 'Políticas RLS adicionadas com sucesso!' as status;
 
 
 
+
+
+
+
+
+
+

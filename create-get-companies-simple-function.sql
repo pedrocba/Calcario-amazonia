@@ -74,3 +74,10 @@ GRANT EXECUTE ON FUNCTION get_companies_simple() TO authenticated;
 
 
 
+
+
+
+
+
+
+

@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { supabase } from "../../lib/supabaseClient";
+import { useAuth } from "../../contexts/SimpleAuthContext";
 
 const initialFormData = {
   code: '', name: '', description: '', category_id: '',
@@ -16,6 +17,7 @@ const initialFormData = {
 };
 
 export default function ProductForm({ product, onSubmit, onCancel, categories, onCategoryAdded }) {
+  const { user, isAuthenticated } = useAuth();
   const [formData, setFormData] = useState(initialFormData);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
@@ -60,8 +62,9 @@ export default function ProductForm({ product, onSubmit, onCancel, categories, o
     if (!newCategoryName.trim()) return alert("O nome da categoria não pode estar vazio.");
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Usuário não autenticado.");
+      if (!isAuthenticated || !user) {
+        throw new Error("Usuário não autenticado.");
+      }
 
       const { data: profile } = await supabase.from('profiles').select('company_id').eq('user_id', user.id).single();
       if (!profile) throw new Error("Perfil do usuário não encontrado.");

@@ -7,11 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Loader2, Building2, CheckCircle } from 'lucide-react';
 
 export default function SelectCompany() {
-  // Dados reais do Supabase
+  // Apenas a empresa CBA - Santarém (Matriz)
   const realCompanies = [
-    { id: '68cacb913d169d191be6c90d', name: 'CBA - Santarém (Matriz)', full_name: 'CBA - Santarém (Matriz)', city: 'Santarém', state: 'PA' },
-    { id: '68cacb92e2a68ede182f868d', name: 'Mucajaí - Roraima (Filial)', full_name: 'Mucajaí - Roraima (Filial)', city: 'Mucajaí', state: 'RR' },
-    { id: '68cacb923b46f6fe1b3325a6', name: 'Loja do Sertanejo - Santarém', full_name: 'Loja do Sertanejo - Santarém', city: 'Santarém', state: 'PA' }
+    { id: '68cacb91-3d16-9d19-1be6-c90d00000000', name: 'CBA - Santarém (Matriz)', full_name: 'CBA - Santarém (Matriz)', city: 'Santarém', state: 'PA' }
   ];
 
   const [companies, setCompanies] = useState([]);

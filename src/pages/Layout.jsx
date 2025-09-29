@@ -78,7 +78,7 @@ export default function Layout({ children, currentPageName }) {
   useEffect(() => {
     // CORREÇÃO DEFINITIVA: Forçar empresa CBA com ID real do Supabase
     const cbaCompany = {
-      id: '68cacb913d169d191be6c90d', // ID real da CBA no Supabase
+      id: '68cacb91-3d16-9d19-1be6-c90d00000000', // ID real da CBA no Supabase
       name: 'CBA - Santarém (Matriz)',
       full_name: 'CBA - Santarém (Matriz)',
       city: 'Santarém',

@@ -95,3 +95,10 @@ O sistema agora deve funcionar sem erros de recursão RLS.
 
 
 
+
+
+
+
+
+
+

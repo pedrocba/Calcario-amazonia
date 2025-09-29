@@ -13,7 +13,7 @@ export const useCompany = () => {
 export const CompanyProvider = ({ children, company }) => {
     // Usar empresa real se não houver empresa definida
     const defaultCompany = {
-        id: '68cacb913d169d191be6c90d', // ID real da CBA - Santarém (Matriz)
+        id: '68cacb91-3d16-9d19-1be6-c90d00000000', // ID real da CBA - Santarém (Matriz)
         name: 'CBA - Santarém (Matriz)',
         code: 'CBA',
         type: 'matriz',

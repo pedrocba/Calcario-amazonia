@@ -47,7 +47,7 @@ export default function ClientesPage() {
             const { data: customersData, error: customersError } = await supabase
                 .from('contacts')
                 .select('*')
-                .eq('company_id', currentCompany.id)
+                .eq('empresa_id', currentCompany.id)
                 .eq('type', 'cliente')
                 .eq('active', true)
                 .order('created_at', { ascending: false });
@@ -58,7 +58,7 @@ export default function ClientesPage() {
             const { data: salesData, error: salesError } = await supabase
                 .from('vendas')
                 .select('*')
-                .eq('company_id', currentCompany.id);
+                .eq('empresa_id', currentCompany.id);
 
             if (salesError) {
                 console.warn('Erro ao carregar vendas:', salesError);
@@ -124,7 +124,7 @@ export default function ClientesPage() {
         try {
             const dataToSave = { 
                 ...customerData, 
-                company_id: currentCompany.id,
+                empresa_id: currentCompany.id,
                 type: 'cliente',
                 active: true
             };
@@ -134,7 +134,7 @@ export default function ClientesPage() {
                     .from('contacts')
                     .update(dataToSave)
                     .eq('id', editingCustomer.id)
-                    .eq('company_id', currentCompany.id);
+                    .eq('empresa_id', currentCompany.id);
 
                 if (error) throw error;
             } else {
@@ -166,7 +166,7 @@ export default function ClientesPage() {
                     .from('contacts')
                     .update({ active: false })
                     .eq('id', customer.id)
-                    .eq('company_id', currentCompany.id);
+                    .eq('empresa_id', currentCompany.id);
 
                 if (error) throw error;
 

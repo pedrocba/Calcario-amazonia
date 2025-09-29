@@ -21,39 +21,22 @@ export default function SelectCompanySimple() {
     try {
       setLoading(true)
       
-      // Buscar empresas usando uma query simples
-      const { data, error } = await supabase
-        .from('companies')
-        .select('*')
-        .order('name')
-
-      if (error) {
-        console.error('Erro ao buscar empresas:', error)
-        
-        // Se der erro, criar empresas de exemplo
-        console.log('Criando empresas de exemplo...')
-        const exampleCompanies = [
-          {
-            id: '1',
-            name: 'Filial Principal',
-            description: 'Filial principal da empresa',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          },
-          {
-            id: '2', 
-            name: 'Filial Secundária',
-            description: 'Filial secundária da empresa',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }
-        ]
-        
-        setCompanies(exampleCompanies)
-        return
-      }
-
-      setCompanies(data || [])
+      // Usar apenas empresas fixas com UUIDs válidos
+      const fixedCompanies = [
+        {
+          id: '68cacb91-3d16-9d19-1be6-c90d00000000',
+          name: 'CBA - Santarém (Matriz)',
+          full_name: 'CBA - Santarém (Matriz)',
+          city: 'Santarém',
+          state: 'PA',
+          type: 'matriz',
+          active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      ]
+      
+      setCompanies(fixedCompanies)
     } catch (error) {
       console.error('Erro ao buscar empresas:', error)
       
@@ -183,6 +166,10 @@ export default function SelectCompanySimple() {
     </div>
   )
 }
+
+
+
+
 
 
 

@@ -18,52 +18,59 @@ export default function AuthRedirect() {
       return
     }
 
-    console.log('Estado atual:', { isAuthenticated, isSuperAdmin, profile: !!profile, loading })
+    console.log('Estado atual:', { isAuthenticated, isSuperAdmin, profile: !!profile, loading, user: !!user })
 
-    // Se não estiver autenticado, ir para login
-    if (!isAuthenticated) {
-      console.log('Usuário não autenticado, redirecionando para login')
-      setHasRedirected(true)
-      navigate('/login')
-      return
-    }
+    // Aguardar um pouco mais para garantir que o estado foi atualizado após login
+    const timeout = setTimeout(() => {
+      console.log('Estado após timeout:', { isAuthenticated, isSuperAdmin, profile: !!profile, loading, user: !!user })
 
-    // Se não tem perfil ainda, aguardar mais um pouco
-    if (!profile) {
-      console.log('Aguardando perfil...')
-      // Aguardar até 5 segundos pelo perfil
-      const timeout = setTimeout(() => {
-        console.log('Timeout aguardando perfil, redirecionando para login')
+      // Se não estiver autenticado, ir para login
+      if (!isAuthenticated) {
+        console.log('Usuário não autenticado, redirecionando para login')
         setHasRedirected(true)
         navigate('/login')
-      }, 5000)
+        return
+      }
+
+      // Se não tem perfil ainda, aguardar mais um pouco
+      if (!profile) {
+        console.log('Aguardando perfil...')
+        // Aguardar até 3 segundos pelo perfil
+        const profileTimeout = setTimeout(() => {
+          console.log('Timeout aguardando perfil, redirecionando para login')
+          setHasRedirected(true)
+          navigate('/login')
+        }, 3000)
+        
+        return () => clearTimeout(profileTimeout)
+      }
+
+      console.log('Perfil carregado:', profile.role)
+      setHasRedirected(true)
+
+      // Se for super admin, ir direto para o dashboard de admin
+      if (isSuperAdmin) {
+        console.log('Redirecionando super admin para dashboard de admin')
+        navigate('/admin/dashboard')
+        return
+      }
+
+      // Verificar se há uma filial selecionada
+      const selectedCompany = localStorage.getItem('selectedCompany')
       
-      return () => clearTimeout(timeout)
-    }
+      if (selectedCompany) {
+        // Se há filial selecionada, ir para o dashboard normal
+        console.log('Redirecionando para dashboard com filial selecionada')
+        navigate('/dashboard')
+      } else {
+        // Se não há filial selecionada, ir para seleção de filial
+        console.log('Redirecionando para seleção de filial')
+        navigate('/select-company')
+      }
+    }, 200) // Aguardar 200ms para garantir que o estado foi atualizado
 
-    console.log('Perfil carregado:', profile.role)
-    setHasRedirected(true)
-
-    // Se for super admin, ir direto para o dashboard de admin
-    if (isSuperAdmin) {
-      console.log('Redirecionando super admin para dashboard de admin')
-      navigate('/admin/dashboard')
-      return
-    }
-
-    // Verificar se há uma filial selecionada
-    const selectedCompany = localStorage.getItem('selectedCompany')
-    
-    if (selectedCompany) {
-      // Se há filial selecionada, ir para o dashboard normal
-      console.log('Redirecionando para dashboard com filial selecionada')
-      navigate('/dashboard')
-    } else {
-      // Se não há filial selecionada, ir para seleção de filial
-      console.log('Redirecionando para seleção de filial')
-      navigate('/select-company')
-    }
-  }, [isAuthenticated, isSuperAdmin, profile, loading, navigate, hasRedirected])
+    return () => clearTimeout(timeout)
+  }, [isAuthenticated, isSuperAdmin, profile, loading, navigate, hasRedirected, user])
 
   if (loading) {
     return (

@@ -12,7 +12,7 @@ export default function ClientBalanceCard({ clientId, clientName, compact = fals
   
   // Usar empresa fixa para simplificar
   const currentCompany = {
-    id: '68cacb913d169d191be6c90d',
+    id: '68cacb91-3d16-9d19-1be6-c90d00000000',
     name: 'CBA - Santarém (Matriz)'
   };
 

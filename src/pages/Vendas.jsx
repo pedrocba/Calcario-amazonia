@@ -42,7 +42,7 @@ export default function VendasPage() {
                         phone
                     )
                 `)
-                .eq('company_id', currentCompany.id)
+                .eq('empresa_id', currentCompany.id)
                 .order('created_at', { ascending: false });
 
             if (vendasError) throw vendasError;

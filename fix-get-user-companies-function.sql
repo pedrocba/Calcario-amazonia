@@ -93,3 +93,10 @@ GRANT EXECUTE ON FUNCTION public.get_user_companies() TO authenticated;
 
 
 
+
+
+
+
+
+
+

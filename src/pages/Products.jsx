@@ -6,12 +6,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Filter, Package } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../lib/supabaseClient";
+import { useAuth } from "../contexts/SimpleAuthContext";
+import { useCompany } from "../components/common/CompanyContext";
 import ProductForm from "../components/products/ProductForm"; // Importação direta
 import SearchDebounce from "../components/common/SearchDebounce";
 import PaginatedList from "../components/common/PaginatedList";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ProductsPage() {
+  const { user, isAuthenticated } = useAuth();
+  const { currentCompany } = useCompany();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -25,15 +29,26 @@ export default function ProductsPage() {
       setIsLoading(true);
       setError(null);
       
+      if (!currentCompany?.id) {
+        console.warn("Nenhuma empresa selecionada");
+        setProducts([]);
+        setCategories([]);
+        return;
+      }
+
+      // Filtrar produtos pela empresa atual
       const { data: productsData, error: productsError } = await supabase
         .from('products')
-        .select(`*, product_categories ( name )`); // JOIN para pegar o nome da categoria
+        .select(`*, product_categories ( name )`)
+        .eq('empresa_id', currentCompany.id);
 
       if (productsError) throw productsError;
 
+      // Filtrar categorias pela empresa atual
       const { data: categoriesData, error: categoriesError } = await supabase
         .from('product_categories')
-        .select('*');
+        .select('*')
+        .eq('empresa_id', currentCompany.id);
 
       if (categoriesError) throw categoriesError;
 
@@ -53,21 +68,25 @@ export default function ProductsPage() {
   };
 
   useEffect(() => {
-    loadProducts();
-  }, []);
+    if (currentCompany?.id) {
+      loadProducts();
+    }
+  }, [currentCompany?.id]);
 
   const handleNewProductClick = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Usuário não autenticado.");
+      if (!isAuthenticated || !user) {
+        throw new Error("Usuário não autenticado.");
+      }
 
-      const { data: profile } = await supabase.from('profiles').select('company_id').eq('user_id', user.id).single();
-      if (!profile || !profile.company_id) throw new Error("Perfil ou filial do usuário não encontrados.");
+      if (!currentCompany?.id) {
+        throw new Error("Nenhuma empresa selecionada.");
+      }
       
       const { data: lastProduct } = await supabase
         .from('products')
         .select('code')
-        .eq('company_id', profile.company_id)
+        .eq('empresa_id', currentCompany.id)
         .order('code', { ascending: false })
         .limit(1)
         .single();
@@ -95,18 +114,18 @@ export default function ProductsPage() {
 
   const handleSubmit = async (productData) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Usuário não autenticado.");
+      if (!isAuthenticated || !user) {
+        throw new Error("Usuário não autenticado.");
+      }
 
-      const { data: profile } = await supabase.from('profiles').select('company_id').eq('user_id', user.id).single();
-      if (!profile || !profile.company_id) throw new Error("Filial do usuário não encontrada.");
+      if (!currentCompany?.id) {
+        throw new Error("Nenhuma empresa selecionada.");
+      }
 
-      const companyId = profile.company_id;
-      
-      // Prepara os dados do produto
+      // Prepara os dados do produto (empresa_id será preenchido pela trigger)
       const productToSave = { 
-        ...productData, 
-        company_id: companyId
+        ...productData
+        // empresa_id será preenchido automaticamente pela trigger
       };
       
       // Remove campos virtuais que não existem na tabela products

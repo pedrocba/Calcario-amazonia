@@ -27,6 +27,7 @@ import VehicleDetail from "./VehicleDetail";
 import WeightHistory from "./WeightHistory";
 
 import Users from "./Users";
+import DataImporter from "./DataImporter";
 
 import Requisicoes from "./Requisicoes";
 
@@ -66,13 +67,13 @@ import Clientes from "./Clientes";
 
 import Vendas from "./Vendas";
 
+import Companies from "./Companies";
+
 import VendaDetalhes from "./VendaDetalhes";
 
 import ContasFinanceiras from "./ContasFinanceiras";
 
 import BackupManager from "./BackupManager";
-
-import DataImporter from "./DataImporter";
 
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
@@ -137,6 +138,8 @@ const PAGES = {
     Clientes: Clientes,
     
     Vendas: Vendas,
+    
+    Companies: Companies,
     
     VendaDetalhes: VendaDetalhes,
     
@@ -282,6 +285,14 @@ function PagesContent() {
                 <ProtectedRoute requiredPermission="manage_users">
                     <Layout currentPageName={currentPage}>
                         <Users />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+            
+            <Route path="/DataImporter" element={
+                <ProtectedRoute requiredPermission="manage_system_settings">
+                    <Layout currentPageName={currentPage}>
+                        <DataImporter />
                     </Layout>
                 </ProtectedRoute>
             } />
@@ -438,6 +449,14 @@ function PagesContent() {
                 </ProtectedRoute>
             } />
             
+            <Route path="/Companies" element={
+                <ProtectedRoute requiredPermission="manage_companies">
+                    <Layout currentPageName={currentPage}>
+                        <Companies />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+            
             <Route path="/VendaDetalhes/:id" element={
                 <ProtectedRoute>
                     <Layout currentPageName={currentPage}>
@@ -458,14 +477,6 @@ function PagesContent() {
                 <ProtectedRoute requiredPermission="manage_system_settings">
                     <Layout currentPageName={currentPage}>
                         <BackupManager />
-                    </Layout>
-                </ProtectedRoute>
-            } />
-            
-            <Route path="/DataImporter" element={
-                <ProtectedRoute requiredPermission="manage_system_settings">
-                    <Layout currentPageName={currentPage}>
-                        <DataImporter />
                     </Layout>
                 </ProtectedRoute>
             } />

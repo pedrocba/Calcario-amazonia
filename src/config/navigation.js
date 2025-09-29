@@ -215,12 +215,28 @@ export const menuItems = [
 
   // ADMINISTRAÇÃO
   {
+    id: 'companies',
+    path: '/Companies',
+    title: 'Empresas',
+    icon: Building2,
+    roles: ['super_admin', 'admin'],
+    description: 'Gestão de empresas e filiais'
+  },
+  {
     id: 'users',
     path: '/Users',
     title: 'Usuários',
     icon: Users,
     roles: ['super_admin', 'admin'],
     description: 'Gestão de usuários'
+  },
+  {
+    id: 'data-importer',
+    path: '/DataImporter',
+    title: 'Importar Dados',
+    icon: Upload,
+    roles: ['super_admin', 'admin', 'gerente_patio'],
+    description: 'Importar clientes, contas e produtos'
   },
   {
     id: 'assets',
@@ -331,7 +347,7 @@ export const getMenuItemsByCategory = (userRole, isSuperAdmin = false) => {
       categories.financial.push(item);
     } else if (item.path.includes('/Reports') || item.path.includes('Report')) {
       categories.reports.push(item);
-    } else if (item.path.includes('/Users') || item.path.includes('/AtivosTI') || item.path.includes('/EstoqueEPIs')) {
+    } else if (item.path.includes('/Companies') || item.path.includes('/Users') || item.path.includes('/AtivosTI') || item.path.includes('/EstoqueEPIs')) {
       categories.administration.push(item);
     } else if (item.path.includes('/ScaleSettings') || item.path.includes('/BridgeInstructions') || item.path.includes('/TransferenciaSimples')) {
       categories.tools.push(item);

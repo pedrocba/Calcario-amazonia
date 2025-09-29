@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ArrowLeft, Calendar, User, DollarSign, Package, FileText } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
+import { useCompany } from '../components/common/CompanyContext';
 import BillingModal from '../components/sales/BillingModal';
 import BillingInfo from '../components/sales/BillingInfo';
 import RetiradaModal from '../components/sales/RetiradaModal';
@@ -15,6 +16,7 @@ import retiradaService from '../api/retiradaService';
 
 const VendaDetalhes = () => {
   const { id } = useParams();
+  const { currentCompany } = useCompany();
   const [venda, setVenda] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -22,34 +24,14 @@ const VendaDetalhes = () => {
   const [billingInfo, setBillingInfo] = useState(null);
   const [showRetiradaModal, setShowRetiradaModal] = useState(false);
   const [showPagamentoModal, setShowPagamentoModal] = useState(false);
-  const [companyId, setCompanyId] = useState(null);
 
   useEffect(() => {
-    if (id) {
+    if (id && currentCompany?.id) {
       loadVendaDetails();
       loadBillingInfo();
-      loadCompanyId();
     }
-  }, [id]);
+  }, [id, currentCompany?.id]);
 
-  const loadCompanyId = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('company_id')
-          .eq('user_id', user.id)
-          .single();
-        
-        if (profile?.company_id) {
-          setCompanyId(profile.company_id);
-        }
-      }
-    } catch (error) {
-      console.error('Erro ao carregar company_id:', error);
-    }
-  };
 
   const loadVendaDetails = async () => {
     try {
@@ -479,7 +461,7 @@ const VendaDetalhes = () => {
         onClose={() => setShowRetiradaModal(false)}
         vendaId={venda?.id}
         clienteId={venda?.client_id}
-        companyId={companyId}
+        companyId={currentCompany?.id}
       />
 
       {/* Modal de Pagamentos Parciais */}
@@ -488,7 +470,7 @@ const VendaDetalhes = () => {
         onClose={() => setShowPagamentoModal(false)}
         vendaId={venda?.id}
         clienteId={venda?.client_id}
-        companyId={companyId}
+        companyId={currentCompany?.id}
         faturaId={billingInfo?.[0]?.id}
       />
     </div>

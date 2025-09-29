@@ -26,16 +26,20 @@ export const AuthProvider = ({ children }) => {
     // Aguardar um pouco para simular chamada de API
     await new Promise(resolve => setTimeout(resolve, 500))
     
-    // Verificação mais flexível
-    const emailMatch = email && email.trim() === 'superadmin@calcarioamazonia.com'
-    const passwordMatch = password && password.trim() === 'admin123'
+    // Verificação mais flexível - Super Admin
+    const superAdminEmailMatch = email && email.trim() === 'superadmin@calcarioamazonia.com'
+    const superAdminPasswordMatch = password && password.trim() === 'admin123'
     
-    console.log('Email match:', emailMatch)
-    console.log('Password match:', passwordMatch)
+    // Verificação Admin padrão
+    const adminEmailMatch = email && email.trim().toLowerCase() === 'admin'
+    const adminPasswordMatch = password && password.trim() === 'admin'
     
-    if (emailMatch && passwordMatch) {
+    console.log('Super Admin match:', superAdminEmailMatch && superAdminPasswordMatch)
+    console.log('Admin match:', adminEmailMatch && adminPasswordMatch)
+    
+    if (superAdminEmailMatch && superAdminPasswordMatch) {
       const mockUser = {
-        id: 'mock-user-id',
+        id: 'super-admin-id',
         email: email.trim(),
         user_metadata: { 
           full_name: 'Super Admin',
@@ -43,7 +47,23 @@ export const AuthProvider = ({ children }) => {
         }
       }
       
-      console.log('Login bem-sucedido!')
+      console.log('Login Super Admin bem-sucedido!')
+      setUser(mockUser)
+      localStorage.setItem('mockUser', JSON.stringify(mockUser))
+      
+      setLoading(false)
+      return { success: true, data: { user: mockUser } }
+    } else if (adminEmailMatch && adminPasswordMatch) {
+      const mockUser = {
+        id: 'admin-id',
+        email: 'admin@calcarioamazonia.com',
+        user_metadata: { 
+          full_name: 'Administrador',
+          role: 'admin'
+        }
+      }
+      
+      console.log('Login Admin bem-sucedido!')
       setUser(mockUser)
       localStorage.setItem('mockUser', JSON.stringify(mockUser))
       
@@ -84,6 +104,9 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   )
 }
+
+
+
 
 
 

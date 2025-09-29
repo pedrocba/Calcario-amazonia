@@ -607,3 +607,10 @@ CREATE TRIGGER update_creditos_cliente_updated_at BEFORE UPDATE ON creditos_clie
 
 
 
+
+
+
+
+
+
+

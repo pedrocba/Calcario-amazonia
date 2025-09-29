@@ -163,3 +163,10 @@ O sistema financeiro está **100% funcional** e pronto para uso profissional. To
 **Execute os scripts SQL e comece a usar!** 🚀
 
 
+
+
+
+
+
+
+

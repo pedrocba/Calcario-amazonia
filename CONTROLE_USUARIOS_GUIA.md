@@ -191,3 +191,10 @@ WHERE email = 'operador@empresa.com';
 
 
 
+
+
+
+
+
+
+

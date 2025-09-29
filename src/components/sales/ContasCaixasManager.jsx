@@ -59,7 +59,7 @@ const ContasCaixasManager = () => {
     try {
       const contaData = {
         ...contaForm,
-        company_id: '68cacb913d169d191be6c90d' // ID da empresa atual
+        company_id: '68cacb91-3d16-9d19-1be6-c90d00000000' // ID da empresa atual
       };
 
       if (editingConta) {
@@ -98,7 +98,7 @@ const ContasCaixasManager = () => {
     try {
       const caixaData = {
         ...caixaForm,
-        company_id: '68cacb913d169d191be6c90d' // ID da empresa atual
+        company_id: '68cacb91-3d16-9d19-1be6-c90d00000000' // ID da empresa atual
       };
 
       if (editingCaixa) {
@@ -404,6 +404,10 @@ const ContasCaixasManager = () => {
 };
 
 export default ContasCaixasManager;
+
+
+
+
 
 
 

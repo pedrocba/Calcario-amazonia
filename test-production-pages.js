@@ -211,3 +211,10 @@ console.log('- Se houver erros, verifique as políticas RLS no Supabase');
 
 
 
+
+
+
+
+
+
+

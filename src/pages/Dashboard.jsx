@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useCompany } from "../components/common/CompanyContext";
 import { useAuth } from "@/contexts/SimpleAuthContext";
-import BranchSwitcherModal from "@/components/BranchSwitcherModal";
 import { supabase } from "../lib/supabaseClient";
 import { 
   Package, 
@@ -50,8 +49,7 @@ export default function Dashboard() {
   const { currentCompany } = useCompany();
   const { user } = useAuth();
   
-  // Estados para controle do modal de troca de filial
-  const [isBranchModalOpen, setBranchModalOpen] = useState(false);
+  // Estados para controle da filial atual
   const [currentBranch, setCurrentBranch] = useState(null);
 
   // Inicializar filial atual
@@ -362,15 +360,6 @@ export default function Dashboard() {
                 <h1 className="text-3xl font-bold text-[var(--color-foreground)]">
                   Dashboard Executivo
                 </h1>
-                <Button
-                  onClick={() => setBranchModalOpen(true)}
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-2"
-                >
-                  <Building2 className="w-4 h-4" />
-                  Trocar Filial
-                </Button>
               </div>
               <p className="text-[var(--color-muted)] flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
@@ -582,17 +571,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Modal de Troca de Filial */}
-      <BranchSwitcherModal
-        isOpen={isBranchModalOpen}
-        onClose={() => setBranchModalOpen(false)}
-        onSelectBranch={async (selectedBranch) => {
-          console.log(`Filial selecionada: ${selectedBranch.name}`);
-          setCurrentBranch(selectedBranch);
-          setBranchModalOpen(false);
-          await fetchDashboardData(selectedBranch.id);
-        }}
-      />
     </div>
   );
 }

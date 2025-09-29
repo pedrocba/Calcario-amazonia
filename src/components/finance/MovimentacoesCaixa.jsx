@@ -64,7 +64,7 @@ export default function MovimentacoesCaixa({ companyId, accounts, onRefresh }) {
             type
           )
         `)
-        .eq('company_id', companyId)
+        .eq('empresa_id', companyId)
         .order('created_at', { ascending: false });
 
       // Aplicar filtros
@@ -110,7 +110,7 @@ export default function MovimentacoesCaixa({ companyId, accounts, onRefresh }) {
         description: formData.description,
         reference: formData.reference,
         notes: formData.notes,
-        company_id: companyId,
+        empresa_id: companyId,
         date: formData.date,
         status: 'pago',
         category: 'movimentacao_manual'

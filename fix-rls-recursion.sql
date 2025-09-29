@@ -87,3 +87,10 @@ SELECT * FROM get_companies_simple();
 
 
 
+
+
+
+
+
+
+

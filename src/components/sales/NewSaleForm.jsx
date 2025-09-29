@@ -8,10 +8,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Trash2, PlusCircle, X } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
+import { useAuth } from '../../contexts/SimpleAuthContext';
 import ProductCombobox from '../common/ProductCombobox';
 import CustomerCombobox from '../common/CustomerCombobox';
 
 const NewSaleForm = ({ onClose, onSaveSuccess }) => {
+  const { user, isAuthenticated } = useAuth();
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [items, setItems] = useState([]);
   const [notes, setNotes] = useState('');
@@ -36,20 +38,22 @@ const NewSaleForm = ({ onClose, onSaveSuccess }) => {
 
   const loadCustomersAndProducts = async () => {
     try {
-      // Buscar clientes
+      // Buscar clientes da empresa atual
       const { data: customersData, error: customersError } = await supabase
         .from('contacts')
         .select('id, name, email, phone, active')
         .eq('active', true)
+        .eq('empresa_id', '68cacb91-3d16-9d19-1be6-c90d00000000') // Filtrar por empresa CBA
         .order('name');
 
       if (customersError) throw customersError;
 
-      // Buscar produtos
+      // Buscar produtos da empresa atual
       const { data: productsData, error: productsError } = await supabase
         .from('products')
         .select('*')
         .eq('active', true)
+        .eq('empresa_id', '68cacb91-3d16-9d19-1be6-c90d00000000') // Filtrar por empresa CBA
         .order('name');
 
       if (productsError) throw productsError;
@@ -109,9 +113,10 @@ const NewSaleForm = ({ onClose, onSaveSuccess }) => {
 
     setIsLoading(true);
     try {
-      // 1. Buscar company_id do usuário logado
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Usuário não autenticado.");
+      // 1. Verificar se usuário está autenticado
+      if (!isAuthenticated || !user) {
+        throw new Error("Usuário não autenticado.");
+      }
 
       const { data: profile } = await supabase
         .from('profiles')

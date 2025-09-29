@@ -84,3 +84,10 @@ CREATE POLICY "Allow all authenticated users to manage products" ON products
 
 
 
+
+
+
+
+
+
+

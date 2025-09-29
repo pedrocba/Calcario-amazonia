@@ -134,3 +134,10 @@ O sistema agora usa uma única instância do cliente Supabase, resolvendo o prob
 
 
 
+
+
+
+
+
+
+

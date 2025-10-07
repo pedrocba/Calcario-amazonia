@@ -41,7 +41,7 @@ import Companies from './Companies';
 import VendaDetalhes from './VendaDetalhes';
 import ContasFinanceiras from './ContasFinanceiras';
 import BackupManager from './BackupManager';
-import { BrowserRouter as Router, Route, Routes, useLocation, matchPath } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const DEFAULT_PAGE_NAME = 'Dashboard';
 
@@ -227,12 +227,46 @@ const PROTECTED_PAGE_CONFIGS = [
   },
 ];
 
-const PROTECTED_LAYOUT_ROUTES = PROTECTED_PAGE_CONFIGS.flatMap(({ paths, ...config }) =>
-  paths.map((path) => ({
-    path,
-    ...config,
-  }))
-);
+function normalizePattern(pathPattern) {
+  if (pathPattern === '/') {
+    return '/';
+  }
+
+  const trimmedPattern = pathPattern.endsWith('/') ? pathPattern.replace(/\/+$/, '') : pathPattern;
+
+  return trimmedPattern;
+}
+
+function createPathMatcher(pathPattern) {
+  const normalizedPattern = normalizePattern(pathPattern)
+    // Escape regex special chars except for parameter indicators
+    .replace(/([.+*?=^!${}()|[\]\\])/g, '\\$1')
+    .replace(/:(\w+)/g, '[^/]+');
+
+  const regex = new RegExp(`^${normalizedPattern}$`, 'i');
+
+  return (pathname) => {
+    if (!pathname) {
+      return false;
+    }
+
+    const normalizedPathname = pathname === '/' ? '/' : pathname.replace(/\/+$/, '');
+
+    return regex.test(normalizedPathname);
+  };
+}
+
+const PROTECTED_LAYOUT_ROUTES = PROTECTED_PAGE_CONFIGS.reduce((acc, { paths, ...config }) => {
+  paths.forEach((path) => {
+    acc.push({
+      path,
+      matcher: createPathMatcher(path),
+      ...config,
+    });
+  });
+
+  return acc;
+}, []);
 
 const STANDALONE_PROTECTED_ROUTES = [
   {
@@ -250,16 +284,17 @@ function PagesContent() {
   const location = useLocation();
 
   const normalizedPath = useMemo(() => {
-    if (location.pathname.length > 1 && location.pathname.endsWith('/')) {
-      return location.pathname.slice(0, -1);
+    if (!location.pathname || location.pathname === '/') {
+      return '/';
     }
-    return location.pathname;
+
+    return location.pathname.endsWith('/')
+      ? location.pathname.replace(/\/+$/, '')
+      : location.pathname;
   }, [location.pathname]);
 
   const currentPage = useMemo(() => {
-    const matchedRoute = PROTECTED_LAYOUT_ROUTES.find(({ path }) =>
-      matchPath({ path, caseSensitive: false, end: true }, normalizedPath)
-    );
+    const matchedRoute = PROTECTED_LAYOUT_ROUTES.find(({ matcher }) => matcher(normalizedPath));
 
     return matchedRoute?.name ?? DEFAULT_PAGE_NAME;
   }, [normalizedPath]);

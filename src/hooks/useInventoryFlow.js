@@ -1,7 +1,14 @@
 import { useMemo } from "react";
 
 function sumBy(items, selector) {
-  return items.reduce((total, item) => total + (selector(item) || 0), 0);
+  return items.reduce((total, item) => {
+    const value = Number(selector(item));
+    return total + (Number.isFinite(value) ? value : 0);
+  }, 0);
+}
+
+function clampTonnage(value) {
+  return Number(Math.max(value, 0).toFixed(2));
 }
 
 function normalizeDate(value) {
@@ -40,83 +47,93 @@ export function useInventoryFlow({
       (item) => item.tonnage,
     );
 
-    const inTransitTonnage = Math.max(totalPurchasedTonnage - totalUnloadedTonnage, 0);
-    const rawYardInventory = Math.max(totalUnloadedTonnage - totalProcessingConsumption, 0);
-    const finishedYardInventory = Math.max(totalProcessedTonnage - deliveredOutboundTonnage, 0);
+    const inTransitTonnage = clampTonnage(totalPurchasedTonnage - totalUnloadedTonnage);
+    const rawYardInventory = clampTonnage(totalUnloadedTonnage - totalProcessingConsumption);
+    const finishedYardInventory = clampTonnage(totalProcessedTonnage - deliveredOutboundTonnage);
 
     const productBreakdown = [];
     const productMap = new Map();
 
-    bargeLoads.forEach((barge) => {
-      if (!productMap.has(barge.product_id)) {
-        productMap.set(barge.product_id, {
-          product_id: barge.product_id,
-          product_name: barge.product_name,
+    const ensureProduct = ({ id, name }) => {
+      if (id == null) {
+        return null;
+      }
+
+      if (!productMap.has(id)) {
+        productMap.set(id, {
+          product_id: id,
+          product_name: name,
           rawPurchased: 0,
           rawAvailable: 0,
           finishedAvailable: 0,
           committed: 0,
         });
       }
-      const productEntry = productMap.get(barge.product_id);
-      productEntry.rawPurchased += barge.total_tonnage || 0;
+      return productMap.get(id);
+    };
+
+    bargeLoads.forEach((barge) => {
+      const productEntry = ensureProduct({ id: barge.product_id, name: barge.product_name });
+      if (productEntry) {
+        productEntry.rawPurchased += Number(barge.total_tonnage) || 0;
+      }
     });
 
     unloadingTrips.forEach((trip) => {
       const productEntry = productMap.get(trip.product_id);
       if (productEntry) {
-        productEntry.rawAvailable += trip.tonnage || 0;
+        productEntry.rawAvailable += Number(trip.tonnage) || 0;
       }
     });
 
     processingBatches.forEach((batch) => {
       const rawProduct = productMap.get(batch.raw_product_id);
       if (rawProduct) {
-        rawProduct.rawAvailable -= batch.tonnage_consumed || 0;
+        rawProduct.rawAvailable -= Number(batch.tonnage_consumed) || 0;
       }
 
-      if (!productMap.has(batch.finished_product_id)) {
-        productMap.set(batch.finished_product_id, {
-          product_id: batch.finished_product_id,
-          product_name: batch.finished_product_name,
-          rawPurchased: 0,
-          rawAvailable: 0,
-          finishedAvailable: 0,
-          committed: 0,
-        });
+      const finishedProduct = ensureProduct({
+        id: batch.finished_product_id,
+        name: batch.finished_product_name,
+      });
+      if (finishedProduct) {
+        finishedProduct.finishedAvailable += Number(batch.tonnage_produced) || 0;
       }
-
-      const finishedProduct = productMap.get(batch.finished_product_id);
-      finishedProduct.finishedAvailable += batch.tonnage_produced || 0;
     });
 
+    const outboundStatusLabels = {
+      scheduled: "Agendado",
+      completed: "Concluído",
+      in_transit: "Em trânsito",
+      cancelled: "Cancelado",
+    };
+
     outboundShipments.forEach((shipment) => {
-      if (!productMap.has(shipment.product_id)) {
-        productMap.set(shipment.product_id, {
-          product_id: shipment.product_id,
-          product_name: shipment.product_name,
-          rawPurchased: 0,
-          rawAvailable: 0,
-          finishedAvailable: 0,
-          committed: 0,
-        });
+      const productEntry = ensureProduct({ id: shipment.product_id, name: shipment.product_name });
+      if (!productEntry) {
+        return;
       }
 
-      const productEntry = productMap.get(shipment.product_id);
       if (shipment.status === "completed") {
-        productEntry.finishedAvailable -= shipment.tonnage || 0;
+        productEntry.finishedAvailable -= Number(shipment.tonnage) || 0;
       } else if (shipment.status === "scheduled") {
-        productEntry.committed += shipment.tonnage || 0;
+        productEntry.committed += Number(shipment.tonnage) || 0;
       }
     });
 
     productMap.forEach((value) => {
+      const rawAvailable = clampTonnage(value.rawAvailable);
+      const rawPurchased = clampTonnage(value.rawPurchased);
+      const finishedAvailable = clampTonnage(value.finishedAvailable);
+      const committed = clampTonnage(value.committed);
+      const netFinished = clampTonnage(finishedAvailable - committed);
       productBreakdown.push({
         ...value,
-        rawAvailable: Number(value.rawAvailable.toFixed(2)),
-        rawPurchased: Number(value.rawPurchased.toFixed(2)),
-        finishedAvailable: Number(value.finishedAvailable.toFixed(2)),
-        committed: Number(value.committed.toFixed(2)),
+        rawAvailable,
+        rawPurchased,
+        finishedAvailable,
+        committed,
+        netFinishedAvailable: netFinished,
       });
     });
 
@@ -156,11 +173,12 @@ export function useInventoryFlow({
 
     outboundShipments.forEach((shipment) => {
       const date = normalizeDate(shipment.shipping_date);
+      const statusLabel = outboundStatusLabels[shipment.status] || shipment.status || "Status desconhecido";
       timelineEvents.push({
         type: "outbound",
         date,
         label: `Saída ${shipment.order_code}`,
-        description: `${shipment.tonnage} t enviadas para ${shipment.customer_name}`,
+        description: `${shipment.tonnage} t enviadas para ${shipment.customer_name} (${statusLabel})`,
       });
     });
 
@@ -173,14 +191,14 @@ export function useInventoryFlow({
 
     return {
       metrics: {
-        totalPurchasedTonnage: Number(totalPurchasedTonnage.toFixed(2)),
-        totalUnloadedTonnage: Number(totalUnloadedTonnage.toFixed(2)),
-        inTransitTonnage: Number(inTransitTonnage.toFixed(2)),
-        rawYardInventory: Number(rawYardInventory.toFixed(2)),
-        finishedYardInventory: Number(finishedYardInventory.toFixed(2)),
-        totalOutboundTonnage: Number(totalOutboundTonnage.toFixed(2)),
-        scheduledOutboundTonnage: Number(scheduledOutboundTonnage.toFixed(2)),
-        deliveredOutboundTonnage: Number(deliveredOutboundTonnage.toFixed(2)),
+        totalPurchasedTonnage: clampTonnage(totalPurchasedTonnage),
+        totalUnloadedTonnage: clampTonnage(totalUnloadedTonnage),
+        inTransitTonnage,
+        rawYardInventory,
+        finishedYardInventory,
+        totalOutboundTonnage: clampTonnage(totalOutboundTonnage),
+        scheduledOutboundTonnage: clampTonnage(scheduledOutboundTonnage),
+        deliveredOutboundTonnage: clampTonnage(deliveredOutboundTonnage),
       },
       productBreakdown,
       timelineEvents,

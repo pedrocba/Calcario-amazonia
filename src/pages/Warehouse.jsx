@@ -10,30 +10,95 @@ import StockEntryForm from "../components/warehouse/StockEntryForm";
 import StockList from "../components/warehouse/StockList";
 import StockFilters from "../components/warehouse/StockFilters";
 import StockStats from "../components/warehouse/StockStats";
+import StockFlowDashboard from "../components/warehouse/StockFlowDashboard";
 import { useCompany } from "../components/common/CompanyContext";
+import useInventoryFlow from "../hooks/useInventoryFlow";
 
 export default function Warehouse() {
   const { currentCompany } = useCompany();
 
   // Dados de exemplo (mock data) para substituir as chamadas de API
   const mockProducts = [
-    { id: 1, name: 'Cimento Portland', code: 'PROD000001', category: 'Cimento', cost_price: 25.50 },
-    { id: 2, name: 'Areia Fina', code: 'PROD000002', category: 'Agregados', cost_price: 15.00 },
-    { id: 3, name: 'Brita 1', code: 'PROD000003', category: 'Agregados', cost_price: 18.00 },
-    { id: 4, name: 'Cal Hidratada', code: 'PROD000004', category: 'Cal', cost_price: 12.50 },
-    { id: 5, name: 'Argila', code: 'PROD000005', category: 'Agregados', cost_price: 8.00 }
+    { id: 101, name: 'Calcário In Natura', code: 'CALC-RAW-001', category: 'Matéria-Prima', unit_of_measure: 'TON', cost_price: 110.00 },
+    { id: 201, name: 'Calcário Britado 0-32', code: 'CALC-PRO-201', category: 'Produto Acabado', unit_of_measure: 'TON', cost_price: 185.00 },
+    { id: 202, name: 'Calcário Micronizado', code: 'CALC-PRO-202', category: 'Produto Acabado', unit_of_measure: 'TON', cost_price: 260.00 },
+    { id: 301, name: 'Resíduo Calcário Fino', code: 'CALC-BY-301', category: 'Subproduto', unit_of_measure: 'TON', cost_price: 0.00 },
   ];
 
   const mockStockEntries = [
-    { id: 1, reference: 'ENT000001', product_id: 1, quantity_received: 200, quantity_available: 150, unit_cost: 25.50, status: 'ativo', origem_entrada: 'compra', setor: 'almoxarifado', entry_date: '2024-01-15T10:00:00Z', notes: 'Entrada de cimento Portland' },
-    { id: 2, reference: 'ENT000002', product_id: 2, quantity_received: 350, quantity_available: 300, unit_cost: 15.00, status: 'ativo', origem_entrada: 'compra', setor: 'almoxarifado', entry_date: '2024-01-14T14:30:00Z', notes: 'Entrada de areia fina' },
-    { id: 3, reference: 'ENT000003', product_id: 3, quantity_received: 150, quantity_available: 120, unit_cost: 18.00, status: 'ativo', origem_entrada: 'compra', setor: 'almoxarifado', entry_date: '2024-01-13T09:15:00Z', notes: 'Entrada de brita 1' },
-    { id: 4, reference: 'ENT000004', product_id: 4, quantity_received: 60, quantity_available: 45, unit_cost: 12.50, status: 'ativo', origem_entrada: 'compra', setor: 'almoxarifado', entry_date: '2024-01-12T16:45:00Z', notes: 'Entrada de cal hidratada' },
-    { id: 5, reference: 'ENT000005', product_id: 5, quantity_received: 250, quantity_available: 200, unit_cost: 8.00, status: 'ativo', origem_entrada: 'compra', setor: 'almoxarifado', entry_date: '2024-01-11T11:20:00Z', notes: 'Entrada de argila' }
+    {
+      id: 1,
+      reference: 'ENT000601',
+      product_id: 101,
+      quantity_received: 500,
+      quantity_available: 360,
+      unit_cost: 110.00,
+      status: 'ativo',
+      origem_entrada: 'compra',
+      setor: 'almoxarifado',
+      entry_date: '2024-01-06T10:00:00Z',
+      notes: '1ª descarga da balsa BL-2401',
+    },
+    {
+      id: 2,
+      reference: 'ENT000602',
+      product_id: 101,
+      quantity_received: 420,
+      quantity_available: 390,
+      unit_cost: 110.00,
+      status: 'ativo',
+      origem_entrada: 'compra',
+      setor: 'almoxarifado',
+      entry_date: '2024-01-08T15:30:00Z',
+      notes: '2ª descarga da balsa BL-2401',
+    },
+    {
+      id: 3,
+      reference: 'ENT000701',
+      product_id: 101,
+      quantity_received: 410,
+      quantity_available: 410,
+      unit_cost: 112.00,
+      status: 'ativo',
+      origem_entrada: 'compra',
+      setor: 'almoxarifado',
+      entry_date: '2024-02-14T09:45:00Z',
+      notes: 'Descarga parcial da balsa BL-2402',
+    },
+    {
+      id: 4,
+      reference: 'ENT-PROC-2401',
+      product_id: 201,
+      quantity_received: 225,
+      quantity_available: 180,
+      unit_cost: 0,
+      status: 'ativo',
+      origem_entrada: 'processamento',
+      setor: 'producao',
+      entry_date: '2024-01-12T11:00:00Z',
+      notes: 'Lote produzido do processo PROC-2401-01',
+    },
+    {
+      id: 5,
+      reference: 'ENT-PROC-2402',
+      product_id: 202,
+      quantity_received: 162,
+      quantity_available: 162,
+      unit_cost: 0,
+      status: 'ativo',
+      origem_entrada: 'processamento',
+      setor: 'producao',
+      entry_date: '2024-02-19T10:00:00Z',
+      notes: 'Lote produzido do processo PROC-2402-01',
+    },
   ];
 
   const [stockEntries, setStockEntries] = useState([]);
   const [products, setProducts] = useState([]);
+  const [bargeLoads, setBargeLoads] = useState([]);
+  const [unloadingTrips, setUnloadingTrips] = useState([]);
+  const [processingBatches, setProcessingBatches] = useState([]);
+  const [outboundShipments, setOutboundShipments] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingEntry, setEditingEntry] = useState(null);
@@ -50,12 +115,125 @@ export default function Warehouse() {
       // Carregar dados de exemplo
       setStockEntries(mockStockEntries);
       setProducts(mockProducts);
+
+      const mockBargeLoads = [
+        {
+          id: 1,
+          barge_code: "BL-2401",
+          supplier: "Mineração Tapajós",
+          product_id: 101,
+          product_name: "Calcário In Natura",
+          purchase_date: "2024-01-02T08:00:00Z",
+          total_tonnage: 1000,
+        },
+        {
+          id: 2,
+          barge_code: "BL-2402",
+          supplier: "Pedreira São Jorge",
+          product_id: 101,
+          product_name: "Calcário In Natura",
+          purchase_date: "2024-02-10T10:00:00Z",
+          total_tonnage: 800,
+        },
+      ];
+
+      const mockUnloadingTrips = [
+        {
+          id: 11,
+          barge_id: 1,
+          sequence: 1,
+          product_id: 101,
+          arrival_date: "2024-01-05T14:30:00Z",
+          tonnage: 320,
+          destination: "Pátio Santarém",
+        },
+        {
+          id: 12,
+          barge_id: 1,
+          sequence: 2,
+          product_id: 101,
+          arrival_date: "2024-01-07T16:00:00Z",
+          tonnage: 340,
+          destination: "Pátio Santarém",
+        },
+        {
+          id: 21,
+          barge_id: 2,
+          sequence: 1,
+          product_id: 101,
+          arrival_date: "2024-02-14T09:45:00Z",
+          tonnage: 410,
+          destination: "Pátio Santarém",
+        },
+      ];
+
+      const mockProcessingBatches = [
+        {
+          id: 100,
+          batch_code: "PROC-2401-01",
+          start_date: "2024-01-09T08:00:00Z",
+          raw_product_id: 101,
+          finished_product_id: 201,
+          finished_product_name: "Calcário Britado 0-32",
+          tonnage_consumed: 250,
+          tonnage_produced: 225,
+        },
+        {
+          id: 101,
+          batch_code: "PROC-2402-01",
+          start_date: "2024-02-18T07:30:00Z",
+          raw_product_id: 101,
+          finished_product_id: 202,
+          finished_product_name: "Calcário Micronizado",
+          tonnage_consumed: 180,
+          tonnage_produced: 162,
+        },
+      ];
+
+      const mockOutboundShipments = [
+        {
+          id: 301,
+          order_code: "PED-5001",
+          product_id: 201,
+          product_name: "Calcário Britado 0-32",
+          customer_name: "Agro Amazônia",
+          shipping_date: "2024-01-20T12:00:00Z",
+          tonnage: 120,
+          status: "completed",
+        },
+        {
+          id: 302,
+          order_code: "PED-5002",
+          product_id: 202,
+          product_name: "Calcário Micronizado",
+          customer_name: "Cooperativa Vale Verde",
+          shipping_date: "2024-02-22T08:30:00Z",
+          tonnage: 90,
+          status: "scheduled",
+        },
+      ];
+
+      setBargeLoads(mockBargeLoads);
+      setUnloadingTrips(mockUnloadingTrips);
+      setProcessingBatches(mockProcessingBatches);
+      setOutboundShipments(mockOutboundShipments);
     } else {
       // Limpar dados se nenhuma filial estiver selecionada
       setStockEntries([]);
       setProducts([]);
+      setBargeLoads([]);
+      setUnloadingTrips([]);
+      setProcessingBatches([]);
+      setOutboundShipments([]);
     }
   }, [currentCompany]);
+
+  const { metrics, productBreakdown, timelineEvents } = useInventoryFlow({
+    bargeLoads,
+    unloadingTrips,
+    processingBatches,
+    outboundShipments,
+  });
 
   const handleSubmit = async (entryData) => {
     try {
@@ -173,6 +351,12 @@ export default function Warehouse() {
             Registrar Nova Entrada no Estoque
           </Button>
         </div>
+
+        <StockFlowDashboard
+          metrics={metrics}
+          productBreakdown={productBreakdown}
+          timelineEvents={timelineEvents}
+        />
 
         <StockStats stockEntries={stockEntries} products={products} isLoading={isLoading} />
         

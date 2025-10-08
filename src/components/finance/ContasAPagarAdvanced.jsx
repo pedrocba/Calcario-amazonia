@@ -1,26 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { 
-  Plus, 
-  Search, 
-  Filter, 
-  Download, 
-  Eye, 
-  Edit, 
+import {
+  Plus,
+  Search,
+  Filter,
+  Download,
+  Eye,
+  Edit,
   CheckCircle,
   AlertTriangle,
   Calendar,
   DollarSign,
-  CreditCard
+  CreditCard,
+  Upload
 } from 'lucide-react';
 import unifiedFinancialService from '@/api/unifiedFinancialService';
 import ContaAPagarForm from './ContaAPagarForm';
 import PagarContaModal from './PagarContaModal';
+import importService from '@/services/importService';
+import { parseFinancialTransactionsCSV } from '@/utils/importParsers';
 
 export default function ContasAPagarAdvanced({ companyId }) {
   const [contas, setContas] = useState([]);
@@ -36,6 +39,8 @@ export default function ContasAPagarAdvanced({ companyId }) {
     dateFrom: '',
     dateTo: ''
   });
+  const fileInputRef = useRef(null);
+  const [isImporting, setIsImporting] = useState(false);
 
   useEffect(() => {
     if (companyId) {
@@ -155,6 +160,75 @@ export default function ContasAPagarAdvanced({ companyId }) {
     loadContas();
   };
 
+  const handleImportClick = () => {
+    if (!companyId) {
+      alert('Selecione uma empresa antes de importar as contas.');
+      return;
+    }
+
+    fileInputRef.current?.click();
+  };
+
+  const handleFileImport = async (event) => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    if (!companyId) {
+      alert('Selecione uma empresa antes de importar as contas.');
+      event.target.value = '';
+      return;
+    }
+
+    setIsImporting(true);
+
+    try {
+      const text = await file.text();
+      const parsedTransactions = parseFinancialTransactionsCSV(text);
+
+      if (parsedTransactions.length === 0) {
+        alert('Nenhuma conta válida encontrada no arquivo selecionado.');
+        return;
+      }
+
+      const validationErrors = importService.validateData(parsedTransactions, 'financial_transactions');
+
+      if (validationErrors.length > 0) {
+        const formatted = validationErrors
+          .slice(0, 5)
+          .map((error) => `Linha ${error.row}: ${error.errors.join(', ')}`)
+          .join('\n');
+
+        const suffix = validationErrors.length > 5 ? '\n... (corrija os demais registros e tente novamente)' : '';
+        alert(`Erros de validação encontrados:\n${formatted}${suffix}`);
+        return;
+      }
+
+      const results = await importService.importFinancialTransactions(parsedTransactions, companyId);
+
+      await loadContas();
+
+      const summary = [
+        `Contas importadas: ${results.success}/${results.total}`,
+        results.errors ? `Registros com erro: ${results.errors}` : null
+      ]
+        .filter(Boolean)
+        .join('\n');
+
+      alert(`Importação de contas concluída!\n${summary}`);
+    } catch (error) {
+      console.error('Erro ao importar contas a pagar:', error);
+      alert(`Falha ao importar contas: ${error.message}`);
+    } finally {
+      setIsImporting(false);
+      if (event.target) {
+        event.target.value = '';
+      }
+    }
+  };
+
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -203,6 +277,13 @@ export default function ContasAPagarAdvanced({ companyId }) {
 
   return (
     <div className="space-y-6">
+      <input
+        type="file"
+        ref={fileInputRef}
+        accept=".csv"
+        onChange={handleFileImport}
+        className="hidden"
+      />
       {/* Cabeçalho com Estatísticas */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
@@ -268,6 +349,10 @@ export default function ContasAPagarAdvanced({ companyId }) {
           <div className="flex items-center justify-between">
             <CardTitle>Contas a Pagar</CardTitle>
             <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={handleImportClick} disabled={isImporting}>
+                <Upload className="h-4 w-4 mr-2" />
+                {isImporting ? 'Importando...' : 'Importar CSV'}
+              </Button>
               <Button variant="outline" size="sm">
                 <Download className="h-4 w-4 mr-2" />
                 Exportar

@@ -10,6 +10,8 @@ import CustomerList from '../components/customers/CustomerList';
 import CustomerSearchModal from '../components/customers/CustomerSearchModal';
 import { useCompany } from '../components/common/CompanyContext';
 import { supabase } from '../lib/supabaseClient';
+import importService from '@/services/importService';
+import { parseContactsCSV } from '@/utils/importParsers';
 
 export default function ClientesPage() {
     const { currentCompany } = useCompany();
@@ -109,9 +111,64 @@ export default function ClientesPage() {
     };
 
     const handleFileImport = async (event) => {
-        alert("Funcionalidade de importação temporariamente desabilitada. Use o formulário para adicionar clientes individualmente.");
-        if(fileInputRef.current) {
-            fileInputRef.current.value = "";
+        const file = event.target.files?.[0];
+
+        if (!file) {
+            return;
+        }
+
+        if (!currentCompany) {
+            alert('Erro: selecione uma filial antes de importar clientes.');
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+            return;
+        }
+
+        setIsImporting(true);
+
+        try {
+            const text = await file.text();
+            const parsedCustomers = parseContactsCSV(text);
+
+            if (parsedCustomers.length === 0) {
+                alert('Nenhum cliente válido encontrado no arquivo selecionado.');
+                return;
+            }
+
+            const validationErrors = importService.validateData(parsedCustomers, 'contacts');
+
+            if (validationErrors.length > 0) {
+                const formatted = validationErrors
+                    .slice(0, 5)
+                    .map(error => `Linha ${error.row}: ${error.errors.join(', ')}`)
+                    .join('\n');
+
+                const suffix = validationErrors.length > 5 ? '\n... (corrija os demais registros e tente novamente)' : '';
+                alert(`Erros de validação encontrados:\n${formatted}${suffix}`);
+                return;
+            }
+
+            const results = await importService.importContacts(parsedCustomers, currentCompany.id);
+
+            await loadData();
+
+            const summary = [
+                `Clientes importados: ${results.success}/${results.total}`,
+                results.errors ? `Registros com erro: ${results.errors}` : null
+            ]
+                .filter(Boolean)
+                .join('\n');
+
+            alert(`Importação concluída!\n${summary}`);
+        } catch (error) {
+            console.error('Erro ao importar clientes:', error);
+            alert(`Falha ao importar clientes: ${error.message}`);
+        } finally {
+            setIsImporting(false);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
         }
     };
 

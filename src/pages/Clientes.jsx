@@ -12,6 +12,160 @@ import { useCompany } from '../components/common/CompanyContext';
 import { supabase } from '../lib/supabaseClient';
 import importService from '@/services/importService';
 import { parseContactsCSV } from '@/utils/importParsers';
+import { mapClientType, cleanDocument, formatPhone } from '@/data/clientesTemplate';
+
+const CONTACT_IMPORT_BATCH_SIZE = 50;
+const INACTIVE_FLAG_VALUES = new Set(['0', 'false', 'nao', 'não', 'inativo', 'inativado', 'desativado', 'desativo']);
+
+const toNullableString = (value) => {
+    if (value === undefined || value === null) {
+        return null;
+    }
+
+    const text = value.toString().trim();
+    return text.length > 0 ? text : null;
+};
+
+const pickFirstFilled = (...values) => {
+    for (const value of values) {
+        const parsed = toNullableString(value);
+        if (parsed) {
+            return parsed;
+        }
+    }
+
+    return null;
+};
+
+const resolveActiveFlag = (value) => {
+    if (value === undefined || value === null || value === '') {
+        return true;
+    }
+
+    if (typeof value === 'boolean') {
+        return value;
+    }
+
+    const normalized = value.toString().trim().toLowerCase();
+    return !INACTIVE_FLAG_VALUES.has(normalized);
+};
+
+const resolveContactType = (row) => {
+    const directType = toNullableString(row?.tipo);
+
+    if (directType) {
+        const normalized = directType.toLowerCase();
+
+        if (['fornecedor', 'supplier'].includes(normalized)) {
+            return 'fornecedor';
+        }
+
+        if (['funcionario', 'funcionário', 'colaborador'].includes(normalized)) {
+            return 'funcionario';
+        }
+
+        if (['outro', 'outros', 'outros clientes'].includes(normalized)) {
+            return 'outro';
+        }
+
+        if (['cliente', 'client'].includes(normalized)) {
+            return 'cliente';
+        }
+    }
+
+    return mapClientType(row?.tipo_lista_precos, row?.cnpj, row?.cpf) || 'cliente';
+};
+
+const resolveDocumentValue = (row) => {
+    const document = pickFirstFilled(row?.documento, row?.cnpj, row?.cpf);
+
+    if (!document) {
+        return null;
+    }
+
+    const cleaned = cleanDocument(document);
+    return cleaned || null;
+};
+
+const resolvePhoneValue = (row) => {
+    const phone = pickFirstFilled(row?.telefone, row?.celular);
+
+    if (!phone) {
+        return null;
+    }
+
+    return formatPhone(phone);
+};
+
+const resolveAddressValue = (row) => {
+    const composed = [row?.endereco, row?.numero, row?.complemento]
+        .map((part) => toNullableString(part))
+        .filter(Boolean);
+
+    if (composed.length > 0) {
+        return composed.join(', ');
+    }
+
+    return pickFirstFilled(row?.address, row?.logradouro);
+};
+
+const mapRowToContactPayload = (row, empresaId, timestamp) => {
+    const name =
+        pickFirstFilled(
+            row?.nome,
+            row?.nome_razao_social,
+            row?.apelido_nome_fantasia,
+            row?.cliente,
+            row?.empresa
+        ) || 'Cliente sem nome';
+
+    const address = resolveAddressValue(row);
+
+    return {
+        name,
+        email: toNullableString(row?.email),
+        phone: resolvePhoneValue(row),
+        document: resolveDocumentValue(row),
+        type: resolveContactType(row),
+        address: address ?? null,
+        city: toNullableString(row?.cidade),
+        state: toNullableString(row?.estado) || toNullableString(row?.uf),
+        zip_code: toNullableString(row?.cep),
+        active: resolveActiveFlag(row?.ativo ?? row?.status),
+        empresa_id: empresaId,
+        created_at: timestamp,
+        updated_at: timestamp,
+    };
+};
+
+const fallbackImportContacts = async (rows, empresaId) => {
+    const timestamp = new Date().toISOString();
+    const results = {
+        total: rows.length,
+        success: 0,
+        errors: 0,
+    };
+
+    for (let index = 0; index < rows.length; index += CONTACT_IMPORT_BATCH_SIZE) {
+        const batch = rows.slice(index, index + CONTACT_IMPORT_BATCH_SIZE);
+        const payload = batch.map((row) => mapRowToContactPayload(row, empresaId, timestamp));
+
+        const { data, error } = await supabase
+            .from('contacts')
+            .insert(payload)
+            .select();
+
+        if (error) {
+            throw new Error(`Erro no lote ${Math.floor(index / CONTACT_IMPORT_BATCH_SIZE) + 1}: ${error.message}`);
+        }
+
+        results.success += data?.length || 0;
+    }
+
+    results.errors = Math.max(results.total - results.success, 0);
+
+    return results;
+};
 
 export default function ClientesPage() {
     const { currentCompany } = useCompany();
@@ -149,13 +303,34 @@ export default function ClientesPage() {
                 return;
             }
 
-            const results = await importService.importContacts(parsedCustomers, currentCompany.id);
+            let results;
+            let usedFallback = false;
+
+            try {
+                results = await importService.importContacts(parsedCustomers, currentCompany.id);
+            } catch (serviceError) {
+                const message = serviceError?.message?.toLowerCase?.() || '';
+                const serviceDisabled = message.includes('desabil') || message.includes('disabled');
+
+                if (!serviceDisabled) {
+                    throw serviceError;
+                }
+
+                console.warn('Serviço de importação indisponível. Aplicando fallback direto no Supabase.', serviceError);
+                usedFallback = true;
+                results = await fallbackImportContacts(parsedCustomers, currentCompany.id);
+            }
 
             await loadData();
 
+            const total = results?.total ?? parsedCustomers.length;
+            const success = results?.success ?? 0;
+            const errorsCount = results?.errors ?? Math.max(total - success, 0);
+
             const summary = [
-                `Clientes importados: ${results.success}/${results.total}`,
-                results.errors ? `Registros com erro: ${results.errors}` : null
+                `Clientes importados: ${success}/${total}`,
+                errorsCount ? `Registros com erro: ${errorsCount}` : null,
+                usedFallback ? 'Importação realizada no modo de compatibilidade.' : null
             ]
                 .filter(Boolean)
                 .join('\n');

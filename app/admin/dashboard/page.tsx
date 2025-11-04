@@ -1,18 +1,15 @@
 import "server-only";
 
-import { createClient } from "@supabase/supabase-js";
+import { Separator } from "@/components/ui/separator";
+import { createClient } from "@/utils/supabase/server";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Users, Ticket, FileText, TicketCheck, Trophy } from "lucide-react";
 
 import CuponsPorDiaChart from "./CuponsPorDiaChart";
 import TopClientesCuponsChart from "./TopClientesCuponsChart";
+import StatusCuponsChart from "./StatusCuponsChart";
 import DashboardGraficoFilial from "./DashboardGraficoFilial";
-
-type KPIStats = {
-  totalCupons: number;
-  totalNotas: number;
-  faturamentoTotal: number;
-};
 
 type CuponsPorDiaData = {
   dia: string;
@@ -24,69 +21,63 @@ type NotasPorFilialData = {
   total: number;
 }[];
 
-// NOVO: Tipo para dados do Top Clientes
 type TopClientesData = {
   cnpj_cliente: string;
   nome_cliente: string;
   quantidade: number;
 }[];
 
-type DashboardLoadResult = {
-  kpis: KPIStats | null;
-  notasPorFilial: NotasPorFilialData;
-  cuponsPorDia: CuponsPorDiaData;
-  topClientes: TopClientesData;
-  errorKpis: Error | null;
-  errorNotasPorFilial: Error | null;
-  errorCuponsPorDia: Error | null;
-  errorTopClientes: Error | null;
-};
+type StatusCuponsData = {
+  status: string;
+  quantidade: number;
+}[];
 
-function createSupabaseServerClient() {
-  const supabaseUrl = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseServiceKey =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+type DashboardError = { message: string };
 
-  if (!supabaseUrl || !supabaseServiceKey) {
-    throw new Error("Configurações do Supabase não encontradas para o dashboard administrativo.");
-  }
+export default async function AdminDashboardPage() {
+  const supabase = await createClient();
 
-  return createClient(supabaseUrl, supabaseServiceKey, {
-    auth: { persistSession: false, autoRefreshToken: false }
-  });
-}
+  const [
+    usuariosResponse,
+    notasResponse,
+    cuponsResponse,
+    cuponsAptosResponse,
+    cuponsSorteadosResponse
+  ] = await Promise.all([
+    supabase.from("usuarios").select("*", { count: "exact", head: true }),
+    supabase.from("notas_fiscais").select("*", { count: "exact", head: true }),
+    supabase.from("cupons").select("*", { count: "exact", head: true }),
+    supabase
+      .from("cupons")
+      .select("*", { count: "exact", head: true })
+      .is("sorteado_em", null),
+    supabase
+      .from("cupons")
+      .select("*", { count: "exact", head: true })
+      .not("sorteado_em", "is", null)
+  ]);
 
-async function carregarDashboardDados(): Promise<DashboardLoadResult> {
-  const supabase = createSupabaseServerClient();
+  const totalUsuarios = usuariosResponse.count ?? 0;
+  const totalNotas = notasResponse.count ?? 0;
+  const totalCupons = cuponsResponse.count ?? 0;
+  const totalCuponsAptos = cuponsAptosResponse.count ?? 0;
+  const totalCuponsSorteados = cuponsSorteadosResponse.count ?? 0;
 
-  let kpis: KPIStats | null = null;
+  const errorUsuarios = usuariosResponse.error;
+  const errorNotas = notasResponse.error;
+  const errorCupons = cuponsResponse.error;
+  const errorCuponsAptos = cuponsAptosResponse.error;
+  const errorCuponsSorteados = cuponsSorteadosResponse.error;
+
   let notasPorFilial: NotasPorFilialData = [];
   let cuponsPorDia: CuponsPorDiaData = [];
-  let topClientes: TopClientesData = [];
+  let topClientesData: TopClientesData = [];
+  let statusCuponsData: StatusCuponsData = [];
 
-  let errorKpis: Error | null = null;
-  let errorNotasPorFilial: Error | null = null;
-  let errorCuponsPorDia: Error | null = null;
-  let errorTopClientes: Error | null = null;
-
-  try {
-    const { data, error } = await supabase.rpc("get_admin_dashboard_kpis");
-
-    if (error) throw error;
-
-    const payload = (data as Partial<KPIStats>) ?? {};
-
-    kpis = {
-      totalCupons: Number(payload.totalCupons ?? 0),
-      totalNotas: Number(payload.totalNotas ?? 0),
-      faturamentoTotal: Number(payload.faturamentoTotal ?? 0)
-    };
-  } catch (err) {
-    if (err instanceof Error) {
-      console.error("Erro ao buscar KPIs do dashboard:", err);
-      errorKpis = err;
-    }
-  }
+  let errorNotasPorFilial: DashboardError | null = null;
+  let errorCuponsPorDia: DashboardError | null = null;
+  let errorTopClientes: DashboardError | null = null;
+  let errorStatusCupons: DashboardError | null = null;
 
   try {
     const { data, error } = await supabase.rpc("get_notas_por_filial");
@@ -97,11 +88,9 @@ async function carregarDashboardDados(): Promise<DashboardLoadResult> {
       filial: String((item as { filial?: string }).filial ?? ""),
       total: Number((item as { total?: number }).total ?? 0)
     }));
-  } catch (err) {
-    if (err instanceof Error) {
-      console.error("Erro ao buscar notas por filial:", err);
-      errorNotasPorFilial = err;
-    }
+  } catch (err: any) {
+    console.error("Erro ao buscar notas por filial:", err);
+    errorNotasPorFilial = { message: err?.message ?? "Erro ao buscar notas por filial." };
   }
 
   try {
@@ -113,62 +102,68 @@ async function carregarDashboardDados(): Promise<DashboardLoadResult> {
       dia: String((item as { dia?: string }).dia ?? ""),
       quantidade: Number((item as { quantidade?: number }).quantidade ?? 0)
     }));
-  } catch (err) {
-    if (err instanceof Error) {
-      console.error("Erro ao buscar cupons por dia:", err);
-      errorCuponsPorDia = err;
-    }
+  } catch (err: any) {
+    console.error("Erro ao buscar cupons por dia:", err);
+    errorCuponsPorDia = { message: err?.message ?? "Erro ao buscar cupons por dia." };
   }
 
-  // --- BUSCA NOVA: Top Clientes por Cupons ---
   try {
     const { data, error } = await supabase.rpc("get_top_clientes_cupons", { limite: 10 });
 
     if (error) throw error;
 
-    topClientes = ((data as TopClientesData) ?? []).map((item) => ({
+    topClientesData = ((data as TopClientesData) ?? []).map((item) => ({
       cnpj_cliente: String((item as { cnpj_cliente?: string }).cnpj_cliente ?? ""),
       nome_cliente: String((item as { nome_cliente?: string }).nome_cliente ?? ""),
       quantidade: Number((item as { quantidade?: number }).quantidade ?? 0)
     }));
-  } catch (err) {
-    if (err instanceof Error) {
-      console.error("Erro ao buscar top clientes por cupons:", err);
-      errorTopClientes = err;
-    }
+  } catch (err: any) {
+    console.error("Erro ao buscar top clientes por cupons:", err);
+    errorTopClientes = { message: err?.message ?? "Erro ao buscar top clientes." };
   }
-  // --- FIM DA BUSCA NOVA ---
 
-  return {
-    kpis,
-    notasPorFilial,
-    cuponsPorDia,
-    topClientes,
-    errorKpis,
+  try {
+    const { data, error } = await supabase.rpc("get_status_cupons");
+
+    if (error) throw error;
+
+    statusCuponsData = ((data as StatusCuponsData) ?? []).map((item) => ({
+      status: String((item as { status?: string }).status ?? ""),
+      quantidade: Number((item as { quantidade?: number }).quantidade ?? 0)
+    }));
+  } catch (err: any) {
+    console.error("Erro ao buscar status dos cupons:", err);
+    errorStatusCupons = { message: err?.message ?? "Erro ao buscar status dos cupons." };
+  }
+
+  const errors = [
+    errorUsuarios,
+    errorNotas,
+    errorCupons,
+    errorCuponsAptos,
+    errorCuponsSorteados,
     errorNotasPorFilial,
     errorCuponsPorDia,
-    errorTopClientes
-  };
-}
-
-export default async function AdminDashboardPage() {
-  const {
-    kpis,
-    notasPorFilial,
-    cuponsPorDia,
-    topClientes,
-    errorKpis,
-    errorNotasPorFilial,
-    errorCuponsPorDia,
-    errorTopClientes
-  } = await carregarDashboardDados();
-
-  const errors = [errorKpis, errorNotasPorFilial, errorCuponsPorDia, errorTopClientes].filter(
-    Boolean
-  ) as Error[];
+    errorTopClientes,
+    errorStatusCupons
+  ]
+    .filter(Boolean)
+    .map((err) => {
+      if (err instanceof Error) return err;
+      return new Error((err as DashboardError).message);
+    });
 
   return (
     <div className="space-y-6">
+      <div className="space-y-1">
+        <h1 className="text-3xl font-bold tracking-tight">Dashboard administrativo</h1>
+        <p className="text-muted-foreground">
+          Acompanhe o desempenho de usuários, notas fiscais e cupons da campanha.
+        </p>
+      </div>
+
+      <Separator />
+
       {errors.length > 0 && (
         <Alert variant="destructive">
           <AlertTitle>Não foi possível carregar todas as informações</AlertTitle>
@@ -182,42 +177,73 @@ export default async function AdminDashboardPage() {
         </Alert>
       )}
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle>Cupons emitidos</CardTitle>
-            <CardDescription>Quantidade total de cupons gerados</CardDescription>
+      <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5">
+        <Card className="shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Usuários</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <span className="text-3xl font-bold">{kpis?.totalCupons ?? 0}</span>
+            <div className="text-2xl font-bold">
+              {errorUsuarios ? "Erro" : totalUsuarios.toLocaleString("pt-BR")}
+            </div>
+            <CardDescription>Usuários cadastrados na plataforma</CardDescription>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Notas fiscais</CardTitle>
-            <CardDescription>Total de notas geradas</CardDescription>
+
+        <Card className="shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Notas fiscais</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <span className="text-3xl font-bold">{kpis?.totalNotas ?? 0}</span>
+            <div className="text-2xl font-bold">
+              {errorNotas ? "Erro" : totalNotas.toLocaleString("pt-BR")}
+            </div>
+            <CardDescription>Documentos fiscais registrados</CardDescription>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Faturamento (R$)</CardTitle>
-            <CardDescription>Receita consolidada</CardDescription>
+
+        <Card className="shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Cupons emitidos</CardTitle>
+            <Ticket className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <span className="text-3xl font-bold">
-              {(kpis?.faturamentoTotal ?? 0).toLocaleString("pt-BR", {
-                style: "currency",
-                currency: "BRL"
-              })}
-            </span>
+            <div className="text-2xl font-bold">
+              {errorCupons ? "Erro" : totalCupons.toLocaleString("pt-BR")}
+            </div>
+            <CardDescription>Cupons gerados para os clientes</CardDescription>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Cupons aptos</CardTitle>
+            <TicketCheck className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {errorCuponsAptos ? "Erro" : totalCuponsAptos.toLocaleString("pt-BR")}
+            </div>
+            <p className="text-xs text-muted-foreground">Aguardando sorteio</p>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Cupons sorteados</CardTitle>
+            <Trophy className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {errorCuponsSorteados ? "Erro" : totalCuponsSorteados.toLocaleString("pt-BR")}
+            </div>
+            <p className="text-xs text-muted-foreground">Já contemplados</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Gráfico de Cupons por Dia */}
       {errorCuponsPorDia ? (
         <Alert variant="destructive">
           <AlertTitle>Erro ao carregar cupons por dia</AlertTitle>
@@ -227,21 +253,26 @@ export default async function AdminDashboardPage() {
         <CuponsPorDiaChart data={cuponsPorDia} />
       )}
 
-      {/* --- NOVO: Renderização Top Clientes --- */}
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {errorTopClientes ? (
           <Alert variant="destructive">
             <AlertTitle>Erro ao carregar Top Clientes</AlertTitle>
             <AlertDescription>{errorTopClientes.message}</AlertDescription>
           </Alert>
         ) : (
-          <TopClientesCuponsChart data={topClientes} />
+          <TopClientesCuponsChart data={topClientesData} />
         )}
-        {/* Aqui pode entrar o próximo gráfico (Notas por Valor) */}
-      </div>
-      {/* --- FIM NOVO Top Clientes --- */}
 
-      {/* Gráfico de barras por filial */}
+        {errorStatusCupons ? (
+          <Alert variant="destructive">
+            <AlertTitle>Erro ao carregar Status dos Cupons</AlertTitle>
+            <AlertDescription>{errorStatusCupons.message}</AlertDescription>
+          </Alert>
+        ) : (
+          <StatusCuponsChart data={statusCuponsData} />
+        )}
+      </div>
+
       {errorNotasPorFilial ? (
         <Alert variant="destructive">
           <AlertTitle>Erro ao carregar notas por filial</AlertTitle>

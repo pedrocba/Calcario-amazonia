@@ -64,9 +64,10 @@ export default function StockEntryForm({ entry, products, onSubmit, onCancel }) 
   };
 
   const handleSelectChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    const normalizedValue = field === 'product_id' ? Number(value) : value;
+    setFormData(prev => ({ ...prev, [field]: normalizedValue }));
     if (field === 'product_id') {
-      const product = products.find(p => p.id === value);
+      const product = products.find(p => p.id === normalizedValue);
       if (product) {
         setFormData(prev => ({
           ...prev,
